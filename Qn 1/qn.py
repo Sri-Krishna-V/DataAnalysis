@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from statsmodels.tsa.arima.model import ARIMA
 import warnings
+import os
 warnings.filterwarnings('ignore')
 
 # Set visualization style
@@ -12,7 +13,16 @@ sns.set_palette("deep")
 plt.rcParams['figure.figsize'] = (14, 8)
 plt.rcParams['font.size'] = 12
 
+# Helper function to save figures
+
+
+def save_figure(fig, filename):
+    fig.savefig(filename, dpi=300, bbox_inches='tight')
+    print(f"Saved visualization to {filename}")
+
 # Create dataset based on NCRB data
+
+
 def generate_cybercrime_dataset():
     years = list(range(2011, 2023))
 
@@ -48,7 +58,7 @@ print("Cybercrime Dataset (2011-2022):")
 print(data[['year', 'Bengaluru', 'Hyderabad', 'Mumbai']].to_string(index=False))
 
 # VISUALIZATION 1: Line chart for yearly trends
-plt.figure()
+fig = plt.figure()
 for city in ['Bengaluru', 'Hyderabad', 'Mumbai']:
     plt.plot(data['year'], data[city], marker='o', linewidth=3, label=city)
 
@@ -59,9 +69,10 @@ plt.legend(fontsize=14)
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.xticks(data['year'], rotation=45, fontsize=14)
 plt.tight_layout()
+save_figure(fig, 'cybercrime_trends.png')
 
 # VISUALIZATION 2: Box plot for crime variability
-plt.figure()
+fig = plt.figure()
 data_melted = pd.melt(data, id_vars=['year'], value_vars=[
                       'Bengaluru', 'Hyderabad', 'Mumbai'])
 sns.boxplot(x='variable', y='value', data=data_melted,
@@ -71,6 +82,7 @@ plt.xlabel('City', fontsize=16)
 plt.ylabel('Number of Cybercrime Cases', fontsize=16)
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.tight_layout()
+save_figure(fig, 'cybercrime_variability.png')
 
 # ARIMA Modeling
 
@@ -98,7 +110,7 @@ mumbai_model, mumbai_forecast, mum_lower, mum_upper = fit_arima_model(
     data['Mumbai'], 'Mumbai')
 
 # VISUALIZATION 3: COVID-19 period (2020-2022)
-plt.figure()
+fig = plt.figure()
 covid_years = [2020, 2021, 2022]
 width = 0.25
 r1 = np.arange(len(covid_years))
@@ -127,9 +139,10 @@ for i, year_idx in enumerate(range(9, 12)):
              ha='center', va='bottom', fontsize=12, fontweight='bold')
 
 plt.tight_layout()
+save_figure(fig, 'cybercrime_covid_period.png')
 
 # VISUALIZATION 4: Growth rates
-plt.figure()
+fig = plt.figure()
 for city, color in zip(['Bengaluru_Growth', 'Hyderabad_Growth', 'Mumbai_Growth'],
                        ['#3274A1', '#E1812C', '#3A923A']):
     plt.plot(data['year'][1:], data[city][1:], marker='o', linewidth=3,
@@ -143,9 +156,10 @@ plt.grid(True, linestyle='--', alpha=0.7)
 plt.axhline(y=0, color='r', linestyle='-', alpha=0.5)
 plt.xticks(data['year'][1:], rotation=45, fontsize=14)
 plt.tight_layout()
+save_figure(fig, 'cybercrime_growth_rates.png')
 
 # VISUALIZATION 5: Forecast visualization
-plt.figure()
+fig = plt.figure()
 colors = ['#3274A1', '#E1812C', '#3A923A']
 forecast_year = 2023
 
@@ -184,9 +198,10 @@ plt.legend(fontsize=14)
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.xticks(list(data['year']) + [forecast_year], rotation=45, fontsize=14)
 plt.tight_layout()
+save_figure(fig, 'cybercrime_forecast_2023.png')
 
 # VISUALIZATION 6: Tech Hubs vs Financial Center
-plt.figure()
+fig = plt.figure()
 plt.plot(data['year'], data['Tech_Hubs_Avg'], marker='o', linewidth=3,
          label='Tech Hubs Avg (Bengaluru, Hyderabad)')
 plt.plot(data['year'], data['Mumbai'], marker='o', linewidth=3,
@@ -199,6 +214,7 @@ plt.legend(fontsize=14)
 plt.grid(True, linestyle='--', alpha=0.7)
 plt.xticks(data['year'], rotation=45, fontsize=14)
 plt.tight_layout()
+save_figure(fig, 'tech_hubs_vs_financial_center.png')
 
 # Analysis of cybercrime categories based on 2022 data from NCRB CSV
 
@@ -230,7 +246,7 @@ def analyze_cybercrime_categories():
     df = pd.DataFrame(categories)
 
     # VISUALIZATION 7: Stacked bar for crime categories
-    plt.figure()
+    fig = plt.figure()
     # Note the .T to transpose
     df.T.plot(kind='bar', stacked=True, figsize=(10, 6))
     plt.title('Breakdown of Cybercrime Categories in 2022', fontsize=16)
@@ -239,6 +255,7 @@ def analyze_cybercrime_categories():
     plt.xticks(rotation=45)
     plt.grid(True, linestyle='--', alpha=0.3, axis='y')
     plt.tight_layout()
+    save_figure(fig, 'cybercrime_categories_2022.png')
 
     # VISUALIZATION 8: Pie charts for each city
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -250,6 +267,7 @@ def analyze_cybercrime_categories():
         axes[i].set_ylabel('')
 
     plt.tight_layout()
+    save_figure(fig, 'cybercrime_categories_pie_charts.png')
 
 
 analyze_cybercrime_categories()
