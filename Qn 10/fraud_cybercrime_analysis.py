@@ -12,6 +12,8 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
 import seaborn as sns
 from matplotlib.colors import LinearSegmentedColormap
 import geopandas as gpd
@@ -23,6 +25,27 @@ warnings.filterwarnings('ignore')
 # Set plot style
 plt.style.use('seaborn-v0_8-whitegrid')
 sns.set_palette("Blues_r")
+
+# Baseline Model Definitions
+
+
+class BaselineModels:
+    @staticmethod
+    def historical_average(df, group_col, value_col, years):
+        """Calculate historical average value for a given grouping."""
+        return df[df['year'].isin(years)].groupby(group_col)[value_col].mean().mean()
+
+    @staticmethod
+    def national_trend(df, value_col):
+        """Calculate national trend as yearly sum."""
+        return df.groupby('year')[value_col].sum().reset_index()
+
+    @staticmethod
+    def naive_forecast(series, horizon):
+        """Generate naive forecast by repeating last value."""
+        last_value = series.iloc[-1]
+        return [last_value] * horizon
+
 
 # Define file paths
 BASE_DIR = r"c:\Users\srikr\Desktop\Studies\Self\Papers\Data Analysis\Complete"
@@ -102,11 +125,16 @@ def explore_data(df):
 def create_choropleth_map(df):
     """
     Create a choropleth map showing geographic distribution of fraud cybercrimes
+    with national average baseline
     """
-    print("\nCreating choropleth map...")
+    print("\nCreating choropleth map with baseline...")
     # Get the most recent year's data
     latest_year = df['year'].max()
     latest_data = df[df['year'] == latest_year].copy()
+
+    # Calculate baseline (national average)
+    national_avg = BaselineModels.historical_average(
+        df, 'state', 'value', [latest_year])
 
     # Try to load India shapefile - this is a placeholder as proper geospatial data would be needed
     # In a real implementation, you would need to have the India shapefile
@@ -119,19 +147,25 @@ def create_choropleth_map(df):
         plt.figure(figsize=(12, 10))
         states_sorted = states_data.sort_values('value', ascending=False)
         ax = sns.barplot(x=states_sorted.index, y=states_sorted['value'])
+
+        # Add baseline comparison
+        ax.axhline(national_avg, color='r', linestyle='--',
+                   linewidth=2, label=f'National Average: {national_avg:,.0f}')
+
         plt.title(
-            f'Fraud-Related Cybercrimes by State in India ({latest_year})', fontsize=14)
+            f'Fraud-Related Cybercrimes by State in India ({latest_year}) with National Baseline', fontsize=14)
         plt.xlabel('State', fontsize=12)
         plt.ylabel('Number of Fraud Cybercrimes', fontsize=12)
         plt.xticks(rotation=90)
+        plt.legend()
         plt.tight_layout()
 
         # Save the figure
         output_path = os.path.join(
-            OUTPUT_DIR, f'fraud_choropleth_{latest_year}.png')
+            OUTPUT_DIR, f'fraud_choropleth_{latest_year}_with_baseline.png')
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
-        print(f"Saved choropleth map to {output_path}")
+        print(f"Saved choropleth map with baseline to {output_path}")
 
     except Exception as e:
         print(f"Error creating choropleth map: {e}")
@@ -142,8 +176,9 @@ def create_choropleth_map(df):
 def create_time_series_plot(df):
     """
     Create a time series plot showing fraud cybercrime trends in top 5 states
+    with national trend baseline
     """
-    print("\nCreating time series plot...")
+    print("\nCreating time series plot with national baseline...")
     # Identify top 5 states based on the most recent year
     latest_year = df['year'].max()
     top_states = df[df['year'] == latest_year].nlargest(5, 'value')[
@@ -152,6 +187,9 @@ def create_time_series_plot(df):
     # Filter data for top 5 states
     top_states_data = df[df['state'].isin(top_states)]
 
+    # Calculate national trend baseline
+    national_trend = BaselineModels.national_trend(df, 'value')
+
     # Create the time series plot
     plt.figure(figsize=(12, 8))
     for state in top_states:
@@ -159,8 +197,13 @@ def create_time_series_plot(df):
         plt.plot(state_data['year'], state_data['value'],
                  marker='o', linewidth=2, label=state)
 
+    # Plot national trend baseline
+    plt.plot(national_trend['year'], national_trend['value'],
+             color='black', linestyle=':', linewidth=3,
+             label='National Trend Baseline')
+
     plt.title(
-        'Fraud-Related Cybercrime Trends in Top 5 States (2019-2022)', fontsize=14)
+        'Fraud-Related Cybercrime Trends in Top 5 States vs National Baseline (2019-2022)', fontsize=14)
     plt.xlabel('Year', fontsize=12)
     plt.ylabel('Number of Fraud Cybercrimes', fontsize=12)
     plt.xticks(top_states_data['year'].unique())
@@ -169,10 +212,10 @@ def create_time_series_plot(df):
     plt.tight_layout()
 
     # Save the figure
-    output_path = os.path.join(OUTPUT_DIR, 'fraud_trends_top_5_states.png')
+    output_path = os.path.join(OUTPUT_DIR, 'fraud_trends_with_baseline.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Saved time series plot to {output_path}")
+    print(f"Saved time series plot with baseline to {output_path}")
 
 # VISUALIZATION 3: Heatmap of Year-over-Year Growth Rate
 
@@ -180,8 +223,9 @@ def create_time_series_plot(df):
 def create_growth_heatmap(pivot_df):
     """
     Create a heatmap showing year-over-year growth rates for fraud cybercrimes
+    with zero-growth baseline
     """
-    print("\nCreating growth rate heatmap...")
+    print("\nCreating growth rate heatmap with baseline...")
     # Select top 15 states based on 2022 values
     top_states = pivot_df[2022].sort_values(ascending=False).head(15).index
     growth_df = pivot_df.loc[top_states, [
@@ -194,6 +238,9 @@ def create_growth_heatmap(pivot_df):
     # Cap growth rates for better visualization
     growth_df = growth_df.clip(-100, 200)
 
+    # Create baseline comparison - zero growth is the baseline
+    baseline_growth = 0  # Zero-growth baseline
+
     # Create the heatmap
     plt.figure(figsize=(10, 8))
     mask = np.zeros_like(growth_df)
@@ -201,11 +248,11 @@ def create_growth_heatmap(pivot_df):
 
     cmap = sns.diverging_palette(10, 240, as_cmap=True)
     ax = sns.heatmap(growth_df, annot=True, fmt='.1f', cmap=cmap,
-                     center=0, linewidths=.5, cbar_kws={"shrink": .8},
+                     center=baseline_growth, linewidths=.5, cbar_kws={"shrink": .8},
                      mask=mask)
 
     plt.title(
-        'Year-over-Year Growth Rate (%) of Fraud Cybercrimes in Top 15 States', fontsize=14)
+        'Year-over-Year Growth Rate (%) vs Zero-Growth Baseline in Top 15 States', fontsize=14)
     plt.xlabel('Year-over-Year Growth', fontsize=12)
     plt.ylabel('State', fontsize=12)
 
@@ -214,10 +261,11 @@ def create_growth_heatmap(pivot_df):
     plt.tight_layout()
 
     # Save the figure
-    output_path = os.path.join(OUTPUT_DIR, 'fraud_growth_heatmap.png')
+    output_path = os.path.join(
+        OUTPUT_DIR, 'fraud_growth_heatmap_with_baseline.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Saved growth heatmap to {output_path}")
+    print(f"Saved growth heatmap with baseline to {output_path}")
 
 # VISUALIZATION 4: Bar chart showing per capita fraud cybercrimes
 
@@ -225,8 +273,9 @@ def create_growth_heatmap(pivot_df):
 def create_per_capita_chart(df):
     """
     Create a bar chart showing per capita fraud cybercrimes in 2022
+    with national per capita baseline
     """
-    print("\nCreating per capita fraud cybercrime chart...")
+    print("\nCreating per capita fraud cybercrime chart with baseline...")
     # This requires population data by state which we don't have in the dataset
     # We'll create a placeholder visualization with mock population data for demonstration
 
@@ -254,23 +303,36 @@ def create_per_capita_chart(df):
     data_2022['per_capita'] = (
         data_2022['value'] / (data_2022['population'] * 1e6)) * 100000
 
+    # Calculate national per capita baseline
+    national_per_capita = (data_2022['value'].sum() /
+                           data_2022['population'].sum()) * 100000
+
     # Sort by per capita value and get top 15
     data_2022 = data_2022.sort_values('per_capita', ascending=False).head(15)
 
     # Create the bar chart
     plt.figure(figsize=(12, 8))
-    sns.barplot(x='per_capita', y='state', data=data_2022, palette='viridis')
-    plt.title('Fraud-Related Cybercrimes per 100,000 People (2022)', fontsize=14)
+    ax = sns.barplot(x='per_capita', y='state',
+                     data=data_2022, palette='viridis')
+
+    # Add baseline reference
+    plt.axvline(national_per_capita, color='green', linestyle='--',
+                label=f'National Per Capita: {national_per_capita:.1f}')
+
+    plt.title(
+        'Fraud-Related Cybercrimes per 100,000 People (2022) with National Baseline', fontsize=14)
     plt.xlabel('Fraud Cybercrimes per 100,000 People', fontsize=12)
     plt.ylabel('State', fontsize=12)
     plt.grid(True, alpha=0.3)
+    plt.legend()
     plt.tight_layout()
 
     # Save the figure
-    output_path = os.path.join(OUTPUT_DIR, 'fraud_per_capita_2022.png')
+    output_path = os.path.join(
+        OUTPUT_DIR, 'fraud_per_capita_2022_with_baseline.png')
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
-    print(f"Saved per capita chart to {output_path}")
+    print(f"Saved per capita chart with baseline to {output_path}")
 
 # VISUALIZATION 5: Bubble plot comparing 2021 vs 2022 fraud cybercrimes
 
@@ -354,9 +416,9 @@ def create_comparison_bubble_plot(df):
 
 def create_arima_forecast(df):
     """
-    Create a simple ARIMA forecast for the top 5 states
+    Create a simple ARIMA forecast for the top 5 states with naive baseline
     """
-    print("\nCreating ARIMA forecast plot...")
+    print("\nCreating ARIMA forecast plot with naive baseline...")
 
     try:
         from statsmodels.tsa.arima.model import ARIMA
@@ -390,12 +452,19 @@ def create_arima_forecast(df):
                          marker='o', linewidth=2, label=f'{state} (Actual)')
                 plt.plot(future_years, forecast, marker='x', linestyle='--',
                          linewidth=1.5, label=f'{state} (Forecast)')
+
+                # Add naive forecast baseline
+                naive_forecast = BaselineModels.naive_forecast(
+                    state_data['value'], 3)
+                plt.plot(future_years, naive_forecast, marker='x', linestyle=':',
+                         linewidth=1, label=f'{state} (Naive Baseline)')
             except:
                 # If ARIMA fails due to limited data, just plot the historical data
                 plt.plot(state_data['year'], state_data['value'],
                          marker='o', linewidth=2, label=f'{state}')
 
-        plt.title('Fraud-Related Cybercrime Forecast for Top 5 States', fontsize=14)
+        plt.title(
+            'Fraud-Related Cybercrime Forecast with Naive Baseline for Top 5 States', fontsize=14)
         plt.xlabel('Year', fontsize=12)
         plt.ylabel('Number of Fraud Cybercrimes', fontsize=12)
         plt.xticks(list(df['year'].unique()) + future_years)
@@ -405,10 +474,10 @@ def create_arima_forecast(df):
 
         # Save the figure
         output_path = os.path.join(
-            OUTPUT_DIR, 'arima_forecast_top_5_states.png')
+            OUTPUT_DIR, 'arima_forecast_with_baseline.png')
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.close()
-        print(f"Saved ARIMA forecast plot to {output_path}")
+        print(f"Saved ARIMA forecast plot with baseline to {output_path}")
 
     except ImportError:
         print("Statsmodels not available, skipping ARIMA forecast...")
