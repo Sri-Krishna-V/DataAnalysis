@@ -2,7 +2,16 @@
 # coding: utf-8
 
 """
-Analysis of Fraud-Related Cybercrimes Across Indian States (2021-2022)
+Enhanced Analysis of Fraud-Related Cybercrimes Across Indian States (2021-2022)
+===============================================================================
+
+This script provides a comprehensive analysis of fraud-related cybercrimes in India
+with integrated baseline models for comparative evaluation. It includes:
+
+1. Multiple baseline model types for contextual analysis
+2. Enhanced visualizations with baseline integration
+3. Modular code structure with dispatcher pattern
+4. Comprehensive reporting of analysis results
 """
 
 import pandas as pd
@@ -93,8 +102,12 @@ class CybercrimeBaselines:
         future_x = np.arange(len(series), len(series) + horizon)
         return [slope * i + intercept for i in future_x]
 
-# File path
-file_path = r'c:\Users\srikr\Desktop\Studies\Self\Papers\Data Analysis\Complete\cyber-crimes-from-ncrb-master-data-year-and-state-wise-number-of-cyber-crimes-committed-in-india-by-types-of-motives.csv'
+# File path - Use a path that works across different environments
+file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 
+                        'cyber-crimes-from-ncrb-master-data-year-and-state-wise-number-of-cyber-crimes-committed-in-india-by-types-of-motives.csv')
+# Fallback to the original path if the relative path doesn't exist
+if not os.path.exists(file_path):
+    file_path = r'c:\Users\srikr\Desktop\Studies\Self\Papers\Data Analysis\Complete\cyber-crimes-from-ncrb-master-data-year-and-state-wise-number-of-cyber-crimes-committed-in-india-by-types-of-motives.csv'
 
 # Load the data
 print("Loading data...")
@@ -141,7 +154,7 @@ print("\nData preparation complete.")
 print("\nBeginning analysis...")
 
 # Create output directory if it doesn't exist
-output_dir = r'c:\Users\srikr\Desktop\Studies\Self\Papers\Data Analysis\Complete\Qn 11'
+output_dir = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(output_dir, exist_ok=True)
 
 # Enhanced Visualization Functions
